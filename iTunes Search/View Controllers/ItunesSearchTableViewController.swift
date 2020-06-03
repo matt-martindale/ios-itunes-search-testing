@@ -10,6 +10,8 @@ import UIKit
 
 class ItunesSearchTableViewController: UITableViewController, UISearchBarDelegate {
 
+    var searchResults: [SearchResult] = []
+    
     override func viewDidLoad() {
         super.viewDidLoad()
         
@@ -34,9 +36,27 @@ class ItunesSearchTableViewController: UITableViewController, UISearchBarDelegat
             break
         }
         
-        searchResultController.performSearch(for: searchTerm, resultType: resultType) {
-            DispatchQueue.main.async {
-                self.tableView.reloadData()
+        searchResultController.performSearch(for: searchTerm,
+                                             resultType: resultType,
+                                             urlSession: URLSession.shared) { result in
+            
+            switch result {
+            case .success(let searchResultsArray):
+                DispatchQueue.main.async {
+                    self.searchResults = searchResultsArray
+                    self.tableView.reloadData()
+                }
+            case .failure(let error):
+                switch error {
+                case .requestURLIsNil:
+                    break
+                case .dataTaskError:
+                    break
+                case .noData:
+                    break
+                case .decodingError(let error):
+                    print("Error decoding json: \(error)")
+                }
             }
         }
     }
@@ -44,13 +64,13 @@ class ItunesSearchTableViewController: UITableViewController, UISearchBarDelegat
     // MARK: - Table view data source
 
     override func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
-        return searchResultController.searchResults.count
+        return searchResults.count
     }
 
     override func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
         let cell = tableView.dequeueReusableCell(withIdentifier: "SearchResultCell", for: indexPath)
 
-        let searchResult = searchResultController.searchResults[indexPath.row]
+        let searchResult = searchResults[indexPath.row]
         
         cell.textLabel?.text = searchResult.title
         cell.detailTextLabel?.text = searchResult.artist
